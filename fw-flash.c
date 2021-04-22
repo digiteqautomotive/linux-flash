@@ -188,7 +188,7 @@ static void usage(const char *cmd)
 	fprintf(stderr, "Usage: %s [OPTIONS] FILE\n", cmd);
 	fprintf(stderr, "Flash the mgb4 card with firmware from FILE.\n\n");
 	fprintf(stderr, "Options:\n");
-	fprintf(stderr, "  -s SN    Flash card serial number SN\n");
+	fprintf(stderr, "  -s SN    Flash card serial number SN (eg. 0x12345678)\n");
 	fprintf(stderr, "  -i       Show firmware info when flashing\n");
 }
 
