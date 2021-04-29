@@ -272,7 +272,7 @@ error_mtd:
 
 static void usage(const char *cmd)
 {
-	fprintf(stderr, "%s - mgb4 card flash tool.\n\n", cmd);
+	fprintf(stderr, "%s - mgb4 firmware flash tool.\n\n", cmd);
 	fprintf(stderr, "Usage:\n");
 	fprintf(stderr, "%s [-s SN] FILE\n", cmd);
 	fprintf(stderr, "%s -i FILE\n", cmd);
