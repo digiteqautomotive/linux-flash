@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/queue.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include "libmtd.h"
@@ -17,36 +18,65 @@
 #define FPDL3 1
 #define GMSL  2
 
-#define ERR_NOT_FOUND     -1
-#define ERR_NOT_SPECIFIED -2
-#define ERR_IO            -3
-
 #define min(a,b) ((a)<(b)?(a):(b))
 
-static int fw_partition(libmtd_t desc, uint32_t sn)
+
+struct entry {
+	int num;
+	uint32_t sn;
+	LIST_ENTRY(entry) entries;
+};
+
+LIST_HEAD(list, entry);
+
+static libmtd_t mtd_open()
+{
+	libmtd_t desc;
+
+	if (!(desc = libmtd_open())) {
+		if (errno)
+			fprintf(stderr, "MTD: %s\n", strerror(errno));
+		else
+			fprintf(stderr, "MTD not present\n");
+	}
+
+	return desc;
+}
+
+static void free_list(struct list *head)
+{
+	struct entry *n1, *n2;
+
+	n1 = LIST_FIRST(head);
+	while (n1 != NULL) {
+		n2 = LIST_NEXT(n1, entries);
+		free(n1);
+		n1 = n2;
+	}
+}
+
+static int part_list(libmtd_t desc, struct list *head)
 {
 	struct mtd_info info;
 	struct mtd_dev_info dev_info;
-	int i, fd;
+	int i, fd, partition = -1;
 	char mtddev[32];
-	int partition = ERR_NOT_FOUND;
-	uint32_t psn;
+	uint32_t sn;
+	struct entry *card;
 
 
 	if (mtd_get_info(desc, &info) < 0) {
 		fprintf(stderr, "Error reading MTD info\n");
-		return ERR_IO;
+		return -1;
 	}
 
 	for (i = info.lowest_mtd_num; i <= info.highest_mtd_num; i++) {
 		if (mtd_get_dev_info1(desc, i, &dev_info) < 0) {
 			fprintf(stderr, "Error getting MTD device #%d info\n", i);
-			return ERR_IO;
+			goto error;
 		}
 
 		if (!strcmp(dev_info.name, FW_PART_NAME)) {
-			if (!sn && partition >= 0)
-				return ERR_NOT_SPECIFIED;
 			partition = i;
 			continue;
 		}
@@ -54,26 +84,58 @@ static int fw_partition(libmtd_t desc, uint32_t sn)
 			continue;
 		if (partition != i - 1) {
 			fprintf(stderr, "Partition order mismatch\n");
-			return ERR_IO;
+			goto error;
 		}
 
 		snprintf(mtddev, sizeof(mtddev), "/dev/mtd%d", i);
 		if ((fd = open(mtddev, O_RDONLY)) < 0) {
 			fprintf(stderr, "Error opening %s: %s\n", mtddev, strerror(errno));
-			return ERR_IO;
+			goto error;
 		}
-		if (mtd_read(&dev_info, fd, 0, 0, &psn, sizeof(psn)) < 0) {
+		if (mtd_read(&dev_info, fd, 0, 0, &sn, sizeof(sn)) < 0) {
 			fprintf(stderr, "Error reading %s\n", mtddev);
 			close(fd);
-			return ERR_IO;
+			goto error;
 		}
 		close(fd);
 
-		if (sn == psn)
-			return partition;
+		if (!(card = malloc(sizeof(struct entry))))
+			goto error;
+		card->num = partition;
+		card->sn = sn;
+		LIST_INSERT_HEAD(head, card, entries);
 	}
 
-	return  sn ? ERR_NOT_FOUND : partition;
+	return 0;
+
+error:
+	free_list(head);
+	return -1;
+}
+
+static int part_find(struct list *head, uint32_t sn)
+{
+	struct entry *np;
+	int pn = -1, cnt = 0;
+
+	LIST_FOREACH(np, head, entries) {
+		if (sn == np->sn)
+			return np->num;
+		pn = np->num;
+		cnt++;
+	}
+
+	if (!sn && cnt == 1)
+		return pn;
+
+	if (sn)
+		fprintf(stderr, "0x%x: card not found\n", sn);
+	else if (!sn && cnt > 1)
+		fprintf(stderr, "card not specified (multiple cards present)\n");
+	else
+		fprintf(stderr, "no card found\n");
+
+	return -1;
 }
 
 static int flash_fw(libmtd_t desc, int partition, const char *data, int size)
@@ -86,7 +148,7 @@ static int flash_fw(libmtd_t desc, int partition, const char *data, int size)
 	snprintf(mtddev, sizeof(mtddev), "/dev/mtd%d", partition);
 	if ((fd = open(mtddev, O_WRONLY)) < 0) {
 		fprintf(stderr, "Error opening %s: %s\n", mtddev, strerror(errno));
-		return ERR_IO;
+		return -1;
 	}
 
 	if (mtd_get_dev_info1(desc, partition, &dev_info) < 0) {
@@ -117,7 +179,7 @@ static int flash_fw(libmtd_t desc, int partition, const char *data, int size)
 error:
 	close(fd);
 
-	return ERR_IO;
+	return -1;
 }
 
 static int read_fw(const char *filename, char **data, size_t *size,
@@ -131,12 +193,12 @@ static int read_fw(const char *filename, char **data, size_t *size,
 
 	if ((fd = open(filename, O_RDONLY)) < 0) {
 		fprintf(stderr, "%s: Error opening input file\n", filename);
-		return ERR_IO;
+		return -1;
 	}
 
 	if (read(fd, &hdr, sizeof(hdr)) < sizeof(hdr) || hdr.magic != FW_MAGIC) {
 		fprintf(stderr, "%s: Not a mgb4 FW file\n", filename);
-		return ERR_IO;
+		return -1;
 	}
 	if (hdr.size > 0x400000) {
 		fprintf(stderr, "%s: %u: Invalid FW data size", filename, hdr.size);
@@ -180,35 +242,67 @@ error_alloc:
 error_fd:
 	close(fd);
 
-	return ERR_IO;
+	return -1;
+}
+
+static int list_devices()
+{
+	libmtd_t desc;
+	struct entry *np;
+	struct list head;
+	LIST_INIT(&head);
+
+
+	if (!(desc = mtd_open()))
+		return -1;
+	if (part_list(desc, &head) < 0)
+		goto error_mtd;
+	LIST_FOREACH(np, &head, entries)
+		printf("0x%x\n", np->sn);
+	libmtd_close(desc);
+	free_list(&head);
+
+	return 0;
+
+error_mtd:
+	libmtd_close(desc);
+
+	return -1;
 }
 
 static void usage(const char *cmd)
 {
-	fprintf(stderr, "Usage: %s [OPTIONS] FILE\n", cmd);
-	fprintf(stderr, "Flash the mgb4 card with firmware from FILE.\n\n");
+	fprintf(stderr, "%s - mgb4 card flash tool.\n\n", cmd);
+	fprintf(stderr, "Usage:\n");
+	fprintf(stderr, "%s [-s SN] FILE\n", cmd);
+	fprintf(stderr, "%s -i FILE\n", cmd);
+	fprintf(stderr, "%s -l\n\n", cmd);
 	fprintf(stderr, "Options:\n");
 	fprintf(stderr, "  -s SN    Flash card serial number SN (eg. 0x12345678)\n");
-	fprintf(stderr, "  -i       Show firmware info when flashing\n");
+	fprintf(stderr, "  -i       Show firmware info and exit\n");
+	fprintf(stderr, "  -l       List available devices (SNs) and exit\n");
 }
 
 int main(int argc, char *argv[])
 {
 	libmtd_t desc;
 	uint32_t sn = 0, version;
-	int opt, partition, verbose = 0;
+	int opt, partition, info = 0;
 	const char *filename, *fw_type;
 	char *data;
 	size_t size;
+	struct list head;
 
-	while ((opt = getopt(argc, argv, "his:")) != -1) {
+	while ((opt = getopt(argc, argv, "hils:")) != -1) {
 		switch (opt) {
 			case 'h':
 				usage(argv[0]);
 				return EXIT_SUCCESS;
 			case 'i':
-				verbose = 1;
+				info = 1;
 				break;
+			case 'l':
+				return list_devices();
 			case 's':
 				sn = strtol(optarg, NULL, 16);
 				break;
@@ -224,42 +318,38 @@ int main(int argc, char *argv[])
 	} else
 		filename = argv[optind];
 
-	if (!(desc = libmtd_open())) {
-		if (errno)
-			fprintf(stderr, "MTD: %s\n", strerror(errno));
-		else
-			fprintf(stderr, "MTD not present\n");
-		return EXIT_FAILURE;
-	}
-
-	if ((partition = fw_partition(desc, sn)) < 0) {
-		if (partition == ERR_NOT_FOUND)
-			fprintf(stderr, "Card not found\n");
-		else if (partition == ERR_NOT_SPECIFIED)
-			fprintf(stderr, "Card not specified (multiple cards present)\n");
-		goto error_mtd;
-	}
-
 	if (read_fw(filename, &data, &size, &version) < 0)
-		goto error_mtd;
-	if (verbose) {
+		return EXIT_FAILURE;
+	if (info) {
 		fw_type = ((version >> 24) == 1)
 		  ? "FPDL3" : ((version >> 24) == 2) ? "GMSL" : "UNKNOWN";
-		printf("FW type: %s, version: %u, size: %zu\n", fw_type,
+		printf("type: %s\nversion: %u\nsize: %zu\n", fw_type,
 		  version & 0xFFFF, size);
+		return EXIT_SUCCESS;
 	}
-	if (flash_fw(desc, partition, data, size) < 0)
+
+	LIST_INIT(&head);
+
+	if (!(desc = mtd_open()))
 		goto error_data;
+	if (part_list(desc, &head) < 0)
+		goto error_mtd;
+	if ((partition = part_find(&head, sn)) < 0)
+		goto error_list;
+	if (flash_fw(desc, partition, data, size) < 0)
+		goto error_list;
 
 	free(data);
 	libmtd_close(desc);
 
 	return EXIT_SUCCESS;
 
-error_data:
-	free(data);
+error_list:
+	free_list(&head);
 error_mtd:
 	libmtd_close(desc);
+error_data:
+	free(data);
 
 	return EXIT_FAILURE;
 }
