@@ -339,6 +339,7 @@ int main(int argc, char *argv[])
 	if (flash_fw(desc, partition, data, size) < 0)
 		goto error_list;
 
+	free_list(&head);
 	free(data);
 	libmtd_close(desc);
 
