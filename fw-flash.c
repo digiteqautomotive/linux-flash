@@ -258,7 +258,8 @@ static int list_devices()
 	if (part_list(desc, &head) < 0)
 		goto error_mtd;
 	LIST_FOREACH(np, &head, entries)
-		printf("0x%x\n", np->sn);
+		printf("%03d-%03d-%03d-%03d\n", np->sn >> 24, (np->sn >> 16) & 0xFF,
+		  (np->sn >>8) & 0xFF, np->sn & 0xFF);
 	libmtd_close(desc);
 	free_list(&head);
 
@@ -270,6 +271,20 @@ error_mtd:
 	return -1;
 }
 
+static int str2sn(const char *str, uint32_t *sn)
+{
+	unsigned b0, b1, b2, b3;
+
+	if (sscanf(str, "%03u-%03u-%03u-%03u", &b3, &b2, &b1, &b0) < 4) {
+		fprintf(stderr, "%s: invalid serial number\n", str);
+		return -1;
+	}
+
+	*sn = (b3 << 24) | (b2 << 16) | (b1 << 8) | b0;
+
+	return 0;
+}
+
 static void usage(const char *cmd)
 {
 	fprintf(stderr, "%s - mgb4 firmware flash tool.\n\n", cmd);
@@ -278,7 +293,7 @@ static void usage(const char *cmd)
 	fprintf(stderr, "%s -i FILE\n", cmd);
 	fprintf(stderr, "%s -l\n\n", cmd);
 	fprintf(stderr, "Options:\n");
-	fprintf(stderr, "  -s SN    Flash card serial number SN (eg. 0x12345678)\n");
+	fprintf(stderr, "  -s SN    Flash card serial number SN\n");
 	fprintf(stderr, "  -i       Show firmware info and exit\n");
 	fprintf(stderr, "  -l       List available devices (SNs) and exit\n");
 }
@@ -304,7 +319,8 @@ int main(int argc, char *argv[])
 			case 'l':
 				return list_devices();
 			case 's':
-				sn = strtol(optarg, NULL, 16);
+				if (str2sn(optarg, &sn) < 0)
+					return EXIT_FAILURE;
 				break;
 			default: /* '?' */
 				usage(argv[0]);
