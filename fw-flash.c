@@ -12,7 +12,7 @@
 #include "header.h"
 
 
-#define SN_PART_NAME "mgb4-sn"
+#define DATA_PART_NAME "mgb4-data"
 #define FW_PART_NAME "mgb4-fw"
 
 #define FPDL3 1
@@ -76,11 +76,11 @@ static int part_list(libmtd_t desc, struct list *head)
 			goto error;
 		}
 
-		if (!strcmp(dev_info.name, FW_PART_NAME)) {
+		if (!strncmp(dev_info.name, FW_PART_NAME, strlen(FW_PART_NAME))) {
 			partition = i;
 			continue;
 		}
-		if (strcmp(dev_info.name, SN_PART_NAME))
+		if (strncmp(dev_info.name, DATA_PART_NAME, strlen(DATA_PART_NAME)))
 			continue;
 		if (partition != i - 1) {
 			fprintf(stderr, "Partition order mismatch\n");
