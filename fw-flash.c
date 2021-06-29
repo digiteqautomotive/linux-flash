@@ -13,7 +13,7 @@
 
 
 #define DATA_PART_NAME "mgb4-data"
-#define FW_PART_NAME "mgb4-fw"
+#define FW_PART_NAME   "mgb4-fw"
 
 #define FPDL3 1
 #define GMSL  2
