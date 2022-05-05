@@ -1,10 +1,10 @@
 CFLAGS = -O2 -Wall -g
 FW_FLASH = fw-flash
-INCLUDE = include
-DEPS = $(INCLUDE)/libmtd.h crc32.h header.h
-LIBDIR = lib
+INCLUDE = src/include
+DEPS = $(INCLUDE)/libmtd.h src/crc32.h src/header.h
+LIBDIR = src/lib
 LIB = $(LIBDIR)/libmtd.a
-OBJ = fw-flash.o crc32.o
+OBJ = src/fw-flash.o src/crc32.o
 ifeq ($(PREFIX),)
 	PREFIX := /usr/local
 endif
@@ -24,7 +24,7 @@ $(FW_FLASH): $(OBJ) $(LIB)
 	$(CC) -o $@ $(LIB) $^ $(CFLAGS)
 
 clean:
-	rm -f *.o $(FW_FLASH)
+	rm -f src/*.o $(FW_FLASH)
 	$(MAKE) -C $(LIBDIR) clean
 
 install:
