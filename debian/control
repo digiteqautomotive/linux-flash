@@ -1,0 +1,16 @@
+Source: mgb4-linux-flash
+Maintainer: Tomas Tvaroha <tomas.tvaroha@digiteqautomotive.com>
+Section: admin
+Priority: optional
+Standards-Version: 4.1.2
+Build-Depends:
+ debhelper (>= 10.3),
+ make,
+ gcc
+
+Package: mgb4-linux-flash
+Architecture: any
+Depends:
+ ${misc:Depends},
+ ${shlibs:Depends}
+Description: Tool for flashing Digiteq Automotive FG4 cards firmware

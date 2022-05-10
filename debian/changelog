@@ -1,0 +1,14 @@
+mgb4-linux-flash (0.2-1) bionic; urgency=medium
+
+  [ Martin Tuma ]
+  * Added "make install" Makefile target
+  * Added RPM package file
+
+ -- Tomas Tvaroha <tomas.tvaroha@digiteqautomotive.com>  Thu, 05 May 2022 11:36:03 +0200
+
+mgb4-linux-flash (0.1-1) bionic; urgency=medium
+
+  [ Martin Tuma ]
+  * Initial release
+
+ -- Tomas Tvaroha <tomas.tvaroha@digiteqautomotive.com>  Fri, 19 Nov 2021 00:00:00 +0100
