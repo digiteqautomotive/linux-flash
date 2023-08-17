@@ -24,6 +24,7 @@
 struct entry {
 	int num;
 	uint32_t sn;
+	int type;
 	LIST_ENTRY(entry) entries;
 };
 
@@ -62,6 +63,7 @@ static int part_list(libmtd_t desc, struct list *head)
 	int i, fd, partition = -1;
 	char mtddev[32];
 	uint32_t sn;
+	long long size = 0;
 	struct entry *card;
 
 
@@ -78,12 +80,17 @@ static int part_list(libmtd_t desc, struct list *head)
 
 		if (!strncmp(dev_info.name, FW_PART_NAME, strlen(FW_PART_NAME))) {
 			partition = i;
+			size = dev_info.size;
 			continue;
 		}
 		if (strncmp(dev_info.name, DATA_PART_NAME, strlen(DATA_PART_NAME)))
 			continue;
 		if (partition != i - 1) {
 			fprintf(stderr, "Partition order mismatch\n");
+			goto error;
+		}
+		if (size != 0x400000 && size != 0x950000) {
+			fprintf(stderr, "Unknown FW partition size (%lld)\n", size);
 			goto error;
 		}
 
@@ -103,6 +110,7 @@ static int part_list(libmtd_t desc, struct list *head)
 			goto error;
 		card->num = partition;
 		card->sn = sn;
+		card->type = (size == 0x950000) ? 2 : 1;
 		LIST_INSERT_HEAD(head, card, entries);
 	}
 
@@ -113,27 +121,37 @@ error:
 	return -1;
 }
 
-static int part_find(struct list *head, uint32_t sn)
+static int part_find(struct list *head, uint32_t sn, int card_type)
 {
 	struct entry *np;
 	int pn = -1, cnt = 0;
 
 	LIST_FOREACH(np, head, entries) {
-		if (sn == np->sn)
-			return np->num;
+		if (sn == np->sn) {
+			if (card_type != np->type) {
+				fprintf(stderr, "Card/FW type mismatch\n");
+				return -1;
+			} else
+				return np->num;
+		}
 		pn = np->num;
 		cnt++;
 	}
 
-	if (!sn && cnt == 1)
-		return pn;
+	if (!sn && cnt == 1) {
+		if (card_type != np->type) {
+			fprintf(stderr, "Card/FW type mismatch\n");
+			return -1;
+		} else
+			return pn;
+	}
 
 	if (sn)
 		fprintf(stderr, "0x%x: card not found\n", sn);
 	else if (!sn && cnt > 1)
-		fprintf(stderr, "card not specified (multiple cards present)\n");
+		fprintf(stderr, "Card not specified (multiple cards present)\n");
 	else
-		fprintf(stderr, "no card found\n");
+		fprintf(stderr, "No card found\n");
 
 	return -1;
 }
@@ -258,8 +276,8 @@ static int list_devices()
 	if (part_list(desc, &head) < 0)
 		goto error_mtd;
 	LIST_FOREACH(np, &head, entries)
-		printf("%03d-%03d-%03d-%03d\n", np->sn >> 24, (np->sn >> 16) & 0xFF,
-		  (np->sn >>8) & 0xFF, np->sn & 0xFF);
+		printf("%03d-%03d-%03d-%03d (%s)\n", np->sn >> 24, (np->sn >> 16) & 0xFF,
+		  (np->sn >>8) & 0xFF, np->sn & 0xFF, np->type == 2 ? "T200" : "T100");
 	libmtd_close(desc);
 	free_list(&head);
 
@@ -303,7 +321,7 @@ int main(int argc, char *argv[])
 	libmtd_t desc;
 	uint32_t sn = 0, version;
 	int opt, partition, info = 0;
-	const char *filename, *fw_type;
+	const char *filename, *fw_type, *card_type;
 	char *data;
 	size_t size;
 	struct list head;
@@ -339,8 +357,10 @@ int main(int argc, char *argv[])
 	if (info) {
 		fw_type = ((version >> 24) == 1)
 		  ? "FPDL3" : ((version >> 24) == 2) ? "GMSL" : "UNKNOWN";
-		printf("type: %s\nversion: %u\nsize: %zu\n", fw_type,
-		  version & 0xFFFF, size);
+		card_type = (((version >> 16) & 0xff) == 1)
+		  ? "T100" : (((version >> 16) & 0xff) == 2) ? "T200" : "UNKNOWN";
+		printf("card: %s\ntype: %s\nversion: %u\nsize: %zu\n",
+		  card_type, fw_type, version & 0xFFFF, size);
 		return EXIT_SUCCESS;
 	}
 
@@ -350,7 +370,7 @@ int main(int argc, char *argv[])
 		goto error_data;
 	if (part_list(desc, &head) < 0)
 		goto error_mtd;
-	if ((partition = part_find(&head, sn)) < 0)
+	if ((partition = part_find(&head, sn, ((version >> 16) & 0xff))) < 0)
 		goto error_list;
 	if (flash_fw(desc, partition, data, size) < 0)
 		goto error_list;
