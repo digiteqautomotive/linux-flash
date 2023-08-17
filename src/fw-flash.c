@@ -220,8 +220,8 @@ static int read_fw(const char *filename, char **data, size_t *size,
 		fprintf(stderr, "%s: Not a mgb4 FW file\n", filename);
 		return -1;
 	}
-	if (hdr.size > 0x400000) {
-		fprintf(stderr, "%s: %u: Invalid FW data size", filename, hdr.size);
+	if (hdr.size > 0x950000) {
+		fprintf(stderr, "%s: %u: Invalid FW data size\n", filename, hdr.size);
 		goto error_fd;
 	}
 
