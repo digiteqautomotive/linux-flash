@@ -12,6 +12,8 @@
 #include "header.h"
 
 
+#define VERSION "0.2"
+
 #define DATA_PART_NAME "mgb4-data"
 #define FW_PART_NAME   "mgb4-fw"
 
@@ -309,11 +311,13 @@ static void usage(const char *cmd)
 	fprintf(stderr, "Usage:\n");
 	fprintf(stderr, "%s [-s SN] FILE\n", cmd);
 	fprintf(stderr, "%s -i FILE\n", cmd);
-	fprintf(stderr, "%s -l\n\n", cmd);
+	fprintf(stderr, "%s -l\n", cmd);
+	fprintf(stderr, "%s -v\n\n", cmd);
 	fprintf(stderr, "Options:\n");
 	fprintf(stderr, "  -s SN    Flash card serial number SN\n");
-	fprintf(stderr, "  -i       Show firmware info and exit\n");
+	fprintf(stderr, "  -i FILE  Show firmware info and exit\n");
 	fprintf(stderr, "  -l       List available devices (SNs) and exit\n");
+	fprintf(stderr, "  -v       Show program version and exit\n");
 }
 
 int main(int argc, char *argv[])
@@ -326,7 +330,7 @@ int main(int argc, char *argv[])
 	size_t size;
 	struct list head;
 
-	while ((opt = getopt(argc, argv, "hils:")) != -1) {
+	while ((opt = getopt(argc, argv, "hils:v")) != -1) {
 		switch (opt) {
 			case 'h':
 				usage(argv[0]);
@@ -340,6 +344,9 @@ int main(int argc, char *argv[])
 				if (str2sn(optarg, &sn) < 0)
 					return EXIT_FAILURE;
 				break;
+			case 'v':
+				printf("%s\n", VERSION);
+				return EXIT_SUCCESS;
 			default: /* '?' */
 				usage(argv[0]);
 				return EXIT_FAILURE;
