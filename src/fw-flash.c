@@ -209,6 +209,7 @@ static int read_fw(const char *filename, char **data, size_t *size,
 	struct header hdr;
 	uint32_t crc, crc_check;
 	ssize_t rs;
+	size_t limit;
 
 
 	if ((fd = open(filename, O_RDONLY)) < 0) {
@@ -220,7 +221,8 @@ static int read_fw(const char *filename, char **data, size_t *size,
 		fprintf(stderr, "%s: Not a mgb4 FW file\n", filename);
 		return -1;
 	}
-	if (hdr.size > 0x950000) {
+	limit = (((hdr.version >> 16) & 0xff) <= 1) ? 0x400000 : 0x950000;
+	if (hdr.size > limit) {
 		fprintf(stderr, "%s: %u: Invalid FW data size\n", filename, hdr.size);
 		goto error_fd;
 	}
