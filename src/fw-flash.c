@@ -125,8 +125,8 @@ error:
 
 static int part_find(struct list *head, uint32_t sn, int card_type)
 {
-	struct entry *np;
-	int pn = -1, cnt = 0;
+	struct entry *np, *fp = 0;
+	int cnt = 0;
 
 	LIST_FOREACH(np, head, entries) {
 		if (sn == np->sn) {
@@ -136,16 +136,16 @@ static int part_find(struct list *head, uint32_t sn, int card_type)
 			} else
 				return np->num;
 		}
-		pn = np->num;
+		fp = np;
 		cnt++;
 	}
 
 	if (!sn && cnt == 1) {
-		if (card_type != np->type) {
+		if (card_type != fp->type) {
 			fprintf(stderr, "Card/FW type mismatch\n");
 			return -1;
 		} else
-			return pn;
+			return fp->num;
 	}
 
 	if (sn)

@@ -1,4 +1,4 @@
-CFLAGS = -O2 -Wall -g
+CFLAGS = -O2 -Wall
 FW_FLASH = fw-flash
 INCLUDE = src/include
 DEPS = $(INCLUDE)/libmtd.h src/crc32.h src/header.h
