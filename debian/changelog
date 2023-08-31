@@ -1,3 +1,12 @@
+mgb4-linux-flash (1.1-1) bionic; urgency=medium
+
+  [ Martin Tůma ]
+  * Fixed broken flashing when no card SN given
+  * Removed debug build flag
+  * Updated specfile to v1.1
+
+ -- Tomas Tvaroha <tomas.tvaroha@e4t.cz>  Thu, 31 Aug 2023 11:48:51 +0200
+
 mgb4-linux-flash (1.0-1) bionic; urgency=medium
 
   [ Martin Tůma ]
