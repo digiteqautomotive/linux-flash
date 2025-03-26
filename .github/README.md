@@ -22,5 +22,16 @@ Options:
 
 ```
 
+## Build
+Build requirements:
+* C compiler + make
+
+Build steps:
+```shell
+make
+```
+
 ## License
 fw-flash is licensed under GPL-3.0 (only).
+fw-flash uses 3rd party code from mtd-utils (GPL-2) and zlib (zlib license),
+see the relevant source files for details.
