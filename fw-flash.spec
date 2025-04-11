@@ -18,6 +18,7 @@ fw-flash is a tool for flashing Digiteq Automotive FG4 cards firmware.
 %setup -q -n fw-flash
 
 %build
+export CFLAGS="${RPM_OPT_FLAGS}"
 make %{?_smp_mflags}
 
 %install
