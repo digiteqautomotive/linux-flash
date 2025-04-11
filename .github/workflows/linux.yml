@@ -1,20 +1,23 @@
 name: Linux
-
-on:
-  push:
-    branches:
-      - main
+on: push
 
 jobs:
   build:
-    name: fw-flash
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install build-essential
-      - name: Build project
-        run: make -j4
+    - uses: actions/checkout@v4
+
+    - name: Modify specfile package version
+      run: sed -Ei 's/(^Version:[[:space:]]*).*/\1${{github.ref_name}}/' fw-flash.spec
+
+    - name: build RPM package
+      id: rpm
+      uses: tumicdq/rpmbuild@master
+      with:
+        spec_file: "fw-flash.spec"
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: fw-flash.rpm
+        path: ${{ steps.rpm.outputs.rpm_dir_path }}
