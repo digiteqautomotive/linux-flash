@@ -17,11 +17,7 @@
 #define DATA_PART_NAME "mgb4-data"
 #define FW_PART_NAME   "mgb4-fw"
 
-#define FPDL3 1
-#define GMSL  2
-
 #define min(a,b) ((a)<(b)?(a):(b))
-
 
 struct entry {
 	int num;
@@ -364,8 +360,19 @@ int main(int argc, char *argv[])
 	if (read_fw(filename, &data, &size, &version) < 0)
 		return EXIT_FAILURE;
 	if (info) {
-		fw_type = ((version >> 24) == 1)
-		  ? "FPDL3" : ((version >> 24) == 2) ? "GMSL" : "UNKNOWN";
+		switch (version >> 24) {
+			case 1:
+				fw_type = "FPDL3";
+				break;
+			case 2:
+				fw_type = "GMSL3";
+				break;
+			case 3:
+				fw_type = "GMSL1";
+				break;
+			default:
+				fw_type = "UNKNOWN";
+		}
 		card_type = (((version >> 16) & 0xff) == 1)
 		  ? "T100" : (((version >> 16) & 0xff) == 2) ? "T200" : "UNKNOWN";
 		printf("card: %s\ntype: %s\nversion: %u\nsize: %zu\n",
