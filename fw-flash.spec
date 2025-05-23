@@ -1,5 +1,5 @@
 Name:           fw-flash
-Version:        1.1
+Version:        1.2
 Release:        1
 Summary:        Digiteq Automotive FG4 flash tool
 License:        GPL-3.0-only
@@ -29,15 +29,18 @@ make install DESTDIR=%{buildroot} PREFIX=/usr
 %{_bindir}/*
 
 %changelog
+* Fri May 23 13:34:05 CEST 2025 - martin.tuma@digiteqautomotive.com 1.2-1
+- Added support for GMSL1 modules/FWs.
+
 * Tue Aug 29 20:02:10 CEST 2023 - martin.tuma@digiteqautomotive.com 1.1-1
-- Fixed broken flashing when no card SN given
+- Fixed broken flashing when no card SN given.
 
 * Fri Aug 18 13:31:35 CEST 2023 - martin.tuma@digiteqautomotive.com 1.0-1
-- Added support for card-specific FWs (T100/T200)
+- Added support for card-specific FWs (T100/T200).
 
 * Thu May  5 11:36:03 CEST 2022 - martin.tuma@digiteqautomotive.com 0.2-1
-- Added "make install" Makefile target
-- Added RPM package file
+- Added "make install" Makefile target.
+- Added RPM package file.
 
 * Fri Nov 19 00:00:00 CET 2021 - martin.tuma@digiteqautomotive.com 0.1-1
-- Initial release
+- Initial release.

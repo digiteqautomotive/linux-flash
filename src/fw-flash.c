@@ -12,7 +12,7 @@
 #include "header.h"
 
 
-#define VERSION "1.1"
+#define VERSION "1.2"
 
 #define DATA_PART_NAME "mgb4-data"
 #define FW_PART_NAME   "mgb4-fw"
