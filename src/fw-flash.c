@@ -370,6 +370,9 @@ int main(int argc, char *argv[])
 			case 3:
 				fw_type = "GMSL1";
 				break;
+			case 4:
+				fw_type = "FPDL4";
+				break;
 			default:
 				fw_type = "UNKNOWN";
 		}
